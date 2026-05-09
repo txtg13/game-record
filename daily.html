@@ -17,30 +17,41 @@
 <body>
     <div class="container">
         <h2 id="gameTitle">游戏名称</h2>
-
         <input type="number" id="resCount" placeholder="当前抽卡资源总数">
         <input type="number" id="ticketCount" placeholder="抽卡券总数">
         <input type="number" id="upPull" placeholder="UP池已抽发数">
-
         <button class="btn-save" onclick="saveData()">保存当前数据</button>
         <button class="btn-back" onclick="location.href='index.html'">返回主页</button>
     </div>
 
     <script>
         let gameName = '';
-        let gameSaveData = JSON.parse(localStorage.getItem('gameSaveData') || '{}');
+        let currUser = "";
+        let oldChecked = false;
 
         window.onload = function(){
-            // 获取传过来的游戏名
+            let user = JSON.parse(localStorage.getItem('gameUser') || '{}');
+            if(!user.username){
+                location.href='login.html';
+                return;
+            }
+            currUser = user.username;
             let urlParams = new URLSearchParams(location.search);
             gameName = urlParams.get('game') || '';
             document.getElementById('gameTitle').innerText = gameName;
 
-            // 回填已有数据
-            let old = gameSaveData[gameName] || {resCount:0,ticketCount:0,upPull:0};
-            document.getElementById('resCount').value = old.resCount;
-            document.getElementById('ticketCount').value = old.ticketCount;
-            document.getElementById('upPull').value = old.upPull;
+            // 拉取服务器数据回填
+            fetch('/api/getGameData',{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({username:currUser})
+            }).then(res=>res.json()).then(userRes=>{
+                let data = userRes.data[gameName] || {resCount:0,ticketCount:0,upPull:0,checked:false};
+                oldChecked = data.checked;
+                document.getElementById('resCount').value = data.resCount;
+                document.getElementById('ticketCount').value = data.ticketCount;
+                document.getElementById('upPull').value = data.upPull;
+            })
         }
 
         function saveData(){
@@ -48,16 +59,21 @@
             let ticket = document.getElementById('ticketCount').value || 0;
             let up = document.getElementById('upPull').value || 0;
 
-            // 保存到本地
-            gameSaveData[gameName] = {
-                resCount: Number(res),
-                ticketCount: Number(ticket),
-                upPull: Number(up)
-            };
-            localStorage.setItem('gameSaveData', JSON.stringify(gameSaveData));
-
-            alert('保存成功！主页已同步更新');
-            location.href = 'index.html';
+            fetch('/api/saveGameData',{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({
+                    username:currUser,
+                    gameName:gameName,
+                    resCount:Number(res),
+                    ticketCount:Number(ticket),
+                    upPull:Number(up),
+                    checked:oldChecked
+                })
+            }).then(()=>{
+                alert('保存成功！手机电脑已互通同步');
+                location.href = 'index.html';
+            })
         }
     </script>
 </body>
