@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>游戏配置</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:微软雅黑}
+body{background:#f5f7fa;padding:20px}
+.box{max-width:400px;background:white;padding:20px;border-radius:12px;margin:0 auto}
+input{width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:6px}
+.btn{width:100%;padding:12px;background:#2563eb;color:white;border:none;border-radius:6px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="box">
+  <input id="name" placeholder="游戏名称">
+  <input id="resName" placeholder="资源名称（如原石/合成玉/星琼）">
+  <input id="singleCost" placeholder="单抽消耗">
+  <input id="upMax" placeholder="UP池保底次数">
+  <input id="normalMax" placeholder="常驻池保底次数">
+  <button class="btn" onclick="save()">保存配置</button>
+  <button class="btn" style="background:#666" onclick="location.href='index.html'">返回</button>
+</div>
+
+<script>
+let user = JSON.parse(localStorage.gameUser||"{}");
+if(!user.username)location.href='login.html';
+
+let id = new URLSearch(location.search).get("id");
+
+async function load(){
+  let res = await fetch("/api/games");
+  let json = await res.json();
+  let g = json.data.find(x=>x.id==id);
+  if(!g)return;
+  document.getElementById("name").value = g.name;
+  document.getElementById("resName").value = g.resName;
+  document.getElementById("singleCost").value = g.singleCost;
+  document.getElementById("upMax").value = g.upMax;
+  document.getElementById("normalMax").value = g.normalMax;
+}
+
+async function save(){
+  let data = {
+    id:id||Date.now().toString(),
+    name:document.getElementById("name").value,
+    resName:document.getElementById("resName").value,
+    singleCost:document.getElementById("singleCost").value,
+    upMax:document.getElementById("upMax").value,
+    normalMax:document.getElementById("normalMax").value
+  };
+  await fetch("/api/save-game",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(data)
+  });
+  alert("保存成功");
+  location.href="index.html";
+}
+
+if(id)load();
+</script>
+</html>

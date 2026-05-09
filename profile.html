@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>头像设置</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:微软雅黑}
+body{background:#f5f7fa;padding:20px}
+.box{max-width:400px;background:white;padding:30px;border-radius:12px;margin:0 auto}
+.avatar{width:120px;height:120px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 20px}
+.btn{width:100%;padding:12px;background:#2563eb;color:white;border:none;border-radius:6px;margin-top:10px;cursor:pointer}
+.back{background:#666}
+</style>
+</head>
+<body>
+<div class="box">
+  <img id="avatar" class="avatar" src="">
+  <input type="file" id="file" style="display:none" accept="image/*">
+  <button class="btn" onclick="document.getElementById('file').click()">上传头像</button>
+  <button class="btn back" onclick="location.href='index.html'">返回主页</button>
+</div>
+
+<script>
+let user = JSON.parse(localStorage.gameUser || "{}");
+if(!user.username) location.href="login.html";
+
+document.getElementById("avatar").src = user.avatar || "https://via.placeholder.com/120";
+
+document.getElementById("file").onchange = async e=>{
+  let fd = new FormData();
+  fd.append("avatar", e.target.files[0]);
+  fd.append("username", user.username);
+  
+  let res = await fetch("/api/upload-avatar",{method:"POST", body:fd});
+  let json = await res.json();
+  
+  user.avatar = json.url;
+  localStorage.gameUser = JSON.stringify(user);
+  location.reload();
+}
+</script>
+</html>
