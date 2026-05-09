@@ -25,32 +25,38 @@
   </div>
 
   <script>
-    function login(){
-      let u = document.getElementById('user').value;
-      let p = document.getElementById('pwd').value;
-      fetch('/api/login',{
+function login(){
+    let u = document.getElementById('user').value;
+    let p = document.getElementById('pwd').value;
+    fetch('/api/login',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({username:u,pwd:p})
-      }).then(res=>res.json()).then(ret=>{
-        if(ret.code===0){
-          localStorage.setItem('gameUser',JSON.stringify(ret.data));
-          location.href='index.html';
-        }else alert(ret.msg);
-      })
-    }
-    function goReg(){
-      let u = document.getElementById('user').value;
-      let p = document.getElementById('pwd').value;
-      fetch('/api/register',{
+    }).then(res=>res.json()).then(ret=>{
+        if(ret && ret.code===0){
+            localStorage.setItem('gameUser',JSON.stringify(ret.data));
+            location.href='index.html';
+        }else{
+            alert(ret && ret.msg ? ret.msg : '登录失败，请检查账号密码');
+        }
+    })
+}
+function goReg(){
+    let u = document.getElementById('user').value;
+    let p = document.getElementById('pwd').value;
+    fetch('/api/register',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({username:u,pwd:p})
-      }).then(res=>res.json()).then(ret=>{
-        alert(ret.msg);
-        if(ret.code===0) location.reload();
-      })
-    }
-  </script>
+    }).then(res=>res.json()).then(ret=>{
+        if(ret && ret.code===0){
+            alert(ret.msg || '注册成功，请登录');
+            location.reload();
+        }else{
+            alert(ret && ret.msg ? ret.msg : '注册失败，请重试');
+        }
+    })
+}
+</script>
 </body>
 </html>
