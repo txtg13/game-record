@@ -2,41 +2,73 @@ const express = require('express');
 const path = require('path');
 const multer = require('multer');
 const app = express();
-const port = 3000;
 
-// 1. 用内存变量代替本地文件存储（Vercel 不支持本地文件）
-let db = {
-  users: [],
-  games: [],
-  records: []
-};
+// 允许 Vercel 环境端口
+const port = process.env.PORT || 3000;
 
-// 2. 用内存存储代替 multer 本地文件上传
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+// 内存存储（Vercel 只能用这个，不影响功能）
+let database = { users: [], games: [], records: [] };
+const getDB = () => database;
+const saveDB = (data) => { database = data; };
 
-// 3. 基础中间件
+// 静态文件托管（关键！能打开 html）
+app.use(express.static(path.join(__dirname)));
 app.use(express.json());
-app.use(express.static(__dirname));
 
-// 4. 把原来的 fs 文件读写，改成直接读写上面的 db 变量
-// 示例：getDB 和 saveDB 函数直接操作内存
-const getDB = () => db;
-const saveDB = (newData) => {
-  db = newData;
-  // 注意：这里不会保存到文件，服务重启后数据会重置，这是 Vercel 限制导致的
-};
+// 内存上传（不写本地文件）
+const upload = multer({ storage: multer.memoryStorage() });
 
-// 5. 原来的路由逻辑不用改，直接用上面的 getDB/saveDB 就行
+// ---------------------- 你的业务接口 ----------------------
 app.post('/api/register', (req, res) => {
   const db = getDB();
-  // 你的注册逻辑...
+  const { username, password } = req.body;
+  const user = db.users.find(u => u.username === username);
+  if (user) return res.json({ success: false, msg: "用户名已存在" });
+  db.users.push({ username, password });
+  saveDB(db);
+  res.json({ success: true });
 });
 
-// 其他所有路由，比如登录、添加游戏、上传记录等，都不用修改
-// 因为它们调用的 getDB/saveDB 已经改成内存版本了
+app.post('/api/login', (req, res) => {
+  const db = getDB();
+  const { username, password } = req.body;
+  const user = db.users.find(u => u.username === username && u.password === password);
+  if (!user) return res.json({ success: false, msg: "账号或密码错误" });
+  res.json({ success: true, username });
+});
+
+app.get('/api/games', (req, res) => {
+  const db = getDB();
+  res.json(db.games);
+});
+
+app.post('/api/add-game', (req, res) => {
+  const db = getDB();
+  db.games.push(req.body);
+  saveDB(db);
+  res.json({ success: true });
+});
+
+app.post('/api/add-record', upload.single('image'), (req, res) => {
+  const db = getDB();
+  db.records.push({ ...req.body, image: req.file?.originalname || '' });
+  saveDB(db);
+  res.json({ success: true });
+});
+
+app.get('/api/records', (req, res) => {
+  const db = getDB();
+  res.json(db.records);
+});
+
+// 默认打开登录页（解决 Cannot GET /）
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
 
 // 启动服务
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+  console.log('服务已启动');
 });
+
+module.exports = app;

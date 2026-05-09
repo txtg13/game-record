@@ -8,24 +8,11 @@
   ],
   "routes": [
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/(.*)",
       "dest": "server.js"
-    },
-    {
-      "src": "/login.html",
-      "dest": "/login.html"
-    },
-    {
-      "src": "/index.html",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/game-config.html",
-      "dest": "/game-config.html"
-    },
-    {
-      "src": "/game-detail.html",
-      "dest": "/game-detail.html"
     }
   ]
 }
