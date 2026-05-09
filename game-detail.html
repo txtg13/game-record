@@ -1,66 +1,72 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>每日记录</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:微软雅黑}
-body{background:#f5f7fa;padding:20px}
-.box{max-width:400px;background:white;padding:20px;border-radius:12px;margin:0 auto}
-input,textarea{width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:6px}
-.btn{width:100%;padding:12px;background:#2563eb;color:white;border:none;border-radius:6px;margin-top:10px}
-.img{max-width:100%;margin-top:10px;border-radius:6px}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏详情</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .calendar { padding: 10px; background: white; border-radius: 5px; }
+        .container { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .bar-chart { height: 200px; display: flex; align-items: flex-end; gap: 10px; padding: 10px; background: #fafafa; border-radius: 5px; }
+        .bar { width: 30px; background: #4285f4; border-radius: 3px 3px 0 0; }
+    </style>
 </head>
 <body>
-<div class="box">
-  <input id="login" type="checkbox" label="今日已登录"> 今日已登录<br>
-  <input id="daily" type="checkbox"> 日常已完成<br>
-  <input id="res" placeholder="当前资源数量">
-  <input id="up" placeholder="UP池垫抽">
-  <input id="normal" placeholder="常驻池垫抽">
-  <textarea id="note" placeholder="备注"></textarea>
-  <input type="file" id="img" style="display:none" accept="image/*">
-  <button class="btn" onclick="document.getElementById('img').click()">上传出货截图</button>
-  <img id="showImg" class="img">
-  <button class="btn" onclick="save()">保存今日记录</button>
-  <button class="btn" style="background:#666" onclick="location.href='index.html'">返回</button>
-</div>
+    <div class="header">
+        <h2 id="gameTitle">游戏名称</h2>
+        <input type="date" class="calendar" id="calendar">
+    </div>
 
-<script>
-let user = JSON.parse(localStorage.gameUser||"{}");
-if(!user.username)location.href='login.html';
-let gameId = new URLSearch(location.search).get("id");
-let imgUrl = "";
+    <div class="container">
+        <div class="card">
+            <h3>资源记录</h3>
+            <div id="resourceList"></div>
+        </div>
+        <div class="card">
+            <h3>资源柱状图</h3>
+            <div class="bar-chart" id="barChart"></div>
+        </div>
+    </div>
 
-document.getElementById("img").onchange = async e=>{
-  let fd = new FormData();
-  fd.append("img", e.target.files[0]);
-  let res = await fetch("/api/upload-img",{method:"POST",body:fd});
-  let json = await res.json();
-  imgUrl = json.url;
-  document.getElementById("showImg").src = imgUrl;
-}
+    <button onclick="location.href='index.html'" style="margin-top:20px; padding:10px 20px; background:#666; color:white; border:none; border-radius:5px;">返回首页</button>
 
-async function save(){
-  let data = {
-    date:new Date().toLocaleDateString(),
-    gameId, user:user.username,
-    login:document.getElementById("login").checked,
-    daily:document.getElementById("daily").checked,
-    res:document.getElementById("res").value,
-    up:document.getElementById("up").value,
-    normal:document.getElementById("normal").value,
-    note:document.getElementById("note").value,
-    imgUrl
-  };
-  await fetch("/api/save-record",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(data)
-  });
-  alert("保存成功！云端同步");
-}
-</script>
+    <script>
+        window.onload = function() {
+            // 模拟数据，后续可对接后端
+            const gameData = {
+                name: "明日方舟",
+                resources: [
+                    { name: "合成玉", count: 6000 },
+                    { name: "源石", count: 100 },
+                    { name: "抽卡券", count: 50 }
+                ]
+            };
+
+            document.getElementById('gameTitle').innerText = gameData.name;
+            document.getElementById('calendar').valueAsDate = new Date();
+
+            // 渲染资源列表
+            const list = document.getElementById('resourceList');
+            gameData.resources.forEach(r => {
+                const p = document.createElement('p');
+                p.textContent = `${r.name}: ${r.count}`;
+                list.appendChild(p);
+            });
+
+            // 渲染柱状图
+            const chart = document.getElementById('barChart');
+            const max = Math.max(...gameData.resources.map(r => r.count));
+            gameData.resources.forEach(r => {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = `${(r.count / max) * 100}%`;
+                bar.title = `${r.name}: ${r.count}`;
+                chart.appendChild(bar);
+            });
+        }
+    </script>
+</body>
 </html>
