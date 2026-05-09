@@ -31,7 +31,7 @@
             align-items:center;
         }
         .btn{
-            padding:8px 14px;
+            padding:8px 12px;
             border:none;
             border-radius:6px;
             color:white;
@@ -51,10 +51,13 @@
             display:flex;
             justify-content:space-between;
             align-items:center;
+            gap:15px;
+            flex-wrap:wrap;
         }
-        .game-info{flex:1;}
-        .game-info h3{margin-bottom:4px;font-size:16px;}
-        .game-info p{color:#666;font-size:13px;}
+        .game-info{flex:1;min-width:220px}
+        .game-info h3{margin-bottom:6px;font-size:17px;}
+        .game-info p{color:#666;font-size:14px;margin:3px 0;}
+
         .chart-box{
             width:80px;
             height:50px;
@@ -66,6 +69,13 @@
             width:12px;
             background:#4285f4;
             border-radius:2px 2px 0 0;
+        }
+        .check-box{
+            display:flex;
+            align-items:center;
+            gap:5px;
+            font-size:14px;
+            margin:6px 0;
         }
     </style>
 </head>
@@ -87,6 +97,17 @@
 <div id="gameList"></div>
 
 <script>
+function goDaily(gameName){
+    location.href = 'daily.html?game=' + encodeURIComponent(gameName);
+}
+function logout(){
+    localStorage.removeItem('gameUser');
+    location.href='login.html';
+}
+
+// 存游戏当前资源数据 本地临时存储
+let gameSaveData = JSON.parse(localStorage.getItem('gameSaveData') || '{}');
+
 window.onload = function(){
     let user = JSON.parse(localStorage.getItem('gameUser') || '{}');
     if(!user.username){
@@ -94,22 +115,17 @@ window.onload = function(){
         return;
     }
 
-    // 加载头像昵称
     fetch('/api/getSettings',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({username:user.username})
     }).then(res=>res.json()).then(data=>{
-        let nick = data.data?.nickname || user.username;
-        let ava = data.data?.avatar || 'https://via.placeholder.com/45';
-        document.getElementById('nickname').innerText = nick;
-        document.getElementById('avatar').src = ava;
+        document.getElementById('nickname').innerText = data.data?.nickname || user.username;
+        document.getElementById('avatar').src = data.data?.avatar || 'https://via.placeholder.com/45';
     })
 
-    // 今日日期
     document.getElementById('calendar').valueAsDate = new Date();
 
-    // 加载游戏列表
     fetch('/api/games')
     .then(res=>res.json())
     .then(data=>{
@@ -119,42 +135,47 @@ window.onload = function(){
     })
 }
 
-// 单独写在外面，保证能点击
 function renderGames(list){
     let box = document.getElementById('gameList');
     box.innerHTML = '';
-
     let groups = {};
+
     list.forEach(item => {
         if(!groups[item.gameName]) groups[item.gameName] = [];
-        groups[item.gameName].push(item);
     })
 
     for(let name in groups){
+        // 读取本地保存的当前数据，没有就默认0
+        let save = gameSaveData[name] || {
+            resCount:0,
+            ticketCount:0,
+            upPull:0
+        };
+
         let div = document.createElement('div');
         div.className = 'game-item';
         div.innerHTML = `
             <div class="game-info">
                 <h3>${name}</h3>
-                <p>点击进入每日记录</p>
+                <div class="check-box">
+                    <input type="checkbox" id="play_${name}">
+                    <label for="play_${name}">此游戏今日是否登录并游玩</label>
+                </div>
+                <p>当前抽卡资源：${save.resCount}</p>
+                <p>抽卡券数量：${save.ticketCount}</p>
+                <p>UP池已抽发数：${save.upPull}</p>
             </div>
+
             <div class="chart-box">
-                <div class="bar" style="height:40%"></div>
-                <div class="bar" style="height:65%"></div>
-                <div class="bar" style="height:80%"></div>
+                <div class="bar" style="height:45%"></div>
+                <div class="bar" style="height:70%"></div>
+                <div class="bar" style="height:85%"></div>
             </div>
-            <button class="btn btn-blue" onclick="goDaily('${name}')">进入记录</button>
+
+            <button class="btn btn-blue" onclick="goDaily('${name}')">修改当前数据</button>
         `;
         box.appendChild(div);
     }
-}
-
-function goDaily(gameName){
-    location.href = 'daily.html?g=' + encodeURIComponent(gameName);
-}
-function logout(){
-    localStorage.removeItem('gameUser');
-    location.href='login.html';
 }
 </script>
 
