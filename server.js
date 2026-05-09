@@ -6,9 +6,162 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '.')));
 
-// 内存数据库
+// 内存数据库（自带所有游戏 + 抽卡规则）
 let users = [];
-let gameRecords = [];
+let gameRecords = [
+  // 明日方舟
+  {
+    gameName: "明日方舟",
+    itemName: "合成玉",
+    itemCount: 6000,
+    itemPrice: 1,
+    totalPrice: 6000,
+    drawCost: 600,
+    drawTicket: "抽卡卷",
+    ratio: "180合成玉 = 1源石"
+  },
+  {
+    gameName: "明日方舟",
+    itemName: "源石",
+    itemCount: 100,
+    itemPrice: 180,
+    totalPrice: 18000,
+    drawCost: 600,
+    drawTicket: "抽卡卷",
+    ratio: "180合成玉 = 1源石"
+  },
+  {
+    gameName: "明日方舟",
+    itemName: "抽卡卷",
+    itemCount: 50,
+    itemPrice: 600,
+    totalPrice: 30000,
+    drawCost: 600,
+    drawTicket: "抽卡卷",
+    ratio: "180合成玉 = 1源石"
+  },
+
+  // 明日方舟终末地
+  {
+    gameName: "明日方舟：终末地",
+    itemName: "合成玉",
+    itemCount: 5000,
+    itemPrice: 1,
+    totalPrice: 5000,
+    drawCost: 500,
+    drawTicket: "抽卡卷",
+    ratio: "90合成玉 = 1源石"
+  },
+  {
+    gameName: "明日方舟：终末地",
+    itemName: "源石",
+    itemCount: 100,
+    itemPrice: 90,
+    totalPrice: 9000,
+    drawCost: 500,
+    drawTicket: "抽卡卷",
+    ratio: "90合成玉 = 1源石"
+  },
+  {
+    gameName: "明日方舟：终末地",
+    itemName: "抽卡卷",
+    itemCount: 50,
+    itemPrice: 500,
+    totalPrice: 25000,
+    drawCost: 500,
+    drawTicket: "抽卡卷",
+    ratio: "90合成玉 = 1源石"
+  },
+
+  // 鸣潮
+  {
+    gameName: "鸣潮",
+    itemName: "星声",
+    itemCount: 8000,
+    itemPrice: 1,
+    totalPrice: 8000,
+    drawCost: 160,
+    drawTicket: "抽卡卷",
+    ratio: "160 = 1抽"
+  },
+  {
+    gameName: "鸣潮",
+    itemName: "抽卡卷",
+    itemCount: 50,
+    itemPrice: 160,
+    totalPrice: 8000,
+    drawCost: 160,
+    drawTicket: "抽卡卷",
+    ratio: "160 = 1抽"
+  },
+
+  // 原神
+  {
+    gameName: "原神",
+    itemName: "原石",
+    itemCount: 8000,
+    itemPrice: 1,
+    totalPrice: 8000,
+    drawCost: 160,
+    drawTicket: "抽卡卷",
+    ratio: "160 = 1抽"
+  },
+  {
+    gameName: "原神",
+    itemName: "抽卡卷",
+    itemCount: 50,
+    itemPrice: 160,
+    totalPrice: 8000,
+    drawCost: 160,
+    drawTicket: "抽卡卷",
+    ratio: "160 = 1抽"
+  },
+
+  // 崩坏：星穹铁道
+  {
+    gameName: "崩坏：星穹铁道",
+    itemName: "星琼",
+    itemCount: 8000,
+    itemPrice: 1,
+    totalPrice: 8000,
+    drawCost: 160,
+    drawTicket: "抽卡卷",
+    ratio: "160 = 1抽"
+  },
+  {
+    gameName: "崩坏：星穹铁道",
+    itemName: "抽卡卷",
+    itemCount: 50,
+    itemPrice: 160,
+    totalPrice: 8000,
+    drawCost: 160,
+    drawTicket: "抽卡卷",
+    ratio: "160 = 1抽"
+  },
+
+  // 绝区零
+  {
+    gameName: "绝区零",
+    itemName: "菲林",
+    itemCount: 8000,
+    itemPrice: 1,
+    totalPrice: 8000,
+    drawCost: 160,
+    drawTicket: "抽卡卷",
+    ratio: "160 = 1抽"
+  },
+  {
+    gameName: "绝区零",
+    itemName: "抽卡卷",
+    itemCount: 50,
+    itemPrice: 160,
+    totalPrice: 8000,
+    drawCost: 160,
+    drawTicket: "抽卡卷",
+    ratio: "160 = 1抽"
+  }
+];
+
 let userSettings = {};
 
 // 登录
@@ -44,14 +197,14 @@ app.post('/api/games', (req, res) => {
   res.json({ code: 0, msg: "保存成功" });
 });
 
-// 保存用户设置（头像、昵称等）
+// 保存设置
 app.post('/api/saveSettings', (req, res) => {
   const { username } = req.body;
   userSettings[username] = req.body;
   res.json({ code: 0, msg: "设置保存成功" });
 });
 
-// 获取用户设置
+// 获取设置
 app.post('/api/getSettings', (req, res) => {
   const { username } = req.body;
   res.json({ code: 0, data: userSettings[username] || {} });
