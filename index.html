@@ -28,6 +28,7 @@
         .top-right{
             display:flex;
             gap:10px;
+            align-items:center;
         }
         .btn{
             padding:8px 14px;
@@ -66,16 +67,10 @@
             background:#4285f4;
             border-radius:2px 2px 0 0;
         }
-        .game-btns{
-            display:flex;
-            gap:6px;
-            margin-left:10px;
-        }
     </style>
 </head>
 <body>
 
-<!-- 顶部：头像 + 名字 + 日历 + 添加游戏 -->
 <div class="top-bar">
     <div class="user-box">
         <img id="avatar" class="avatar" src="">
@@ -83,18 +78,16 @@
     </div>
     <div class="top-right">
         <input type="date" id="calendar">
-        <button class="btn btn-blue" onclick="goAdd()">添加游戏</button>
-        <button class="btn btn-gray" onclick="goSetting()">设置</button>
+        <button class="btn btn-blue" onclick="location.href='game-config.html'">添加游戏</button>
+        <button class="btn btn-gray" onclick="location.href='setting.html'">设置</button>
         <button class="btn btn-red" onclick="logout()">退出</button>
     </div>
 </div>
 
-<!-- 游戏列表 -->
 <div id="gameList"></div>
 
 <script>
 window.onload = function(){
-    // 登录判断
     let user = JSON.parse(localStorage.getItem('gameUser') || '{}');
     if(!user.username){
         location.href='login.html';
@@ -107,14 +100,16 @@ window.onload = function(){
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({username:user.username})
     }).then(res=>res.json()).then(data=>{
-        document.getElementById('nickname').innerText = data.data?.nickname || user.username;
-        document.getElementById('avatar').src = data.data?.avatar || 'https://via.placeholder.com/45';
+        let nick = data.data?.nickname || user.username;
+        let ava = data.data?.avatar || 'https://via.placeholder.com/45';
+        document.getElementById('nickname').innerText = nick;
+        document.getElementById('avatar').src = ava;
     })
 
-    // 日历默认今天
+    // 今日日期
     document.getElementById('calendar').valueAsDate = new Date();
 
-    // 加载游戏
+    // 加载游戏列表
     fetch('/api/games')
     .then(res=>res.json())
     .then(data=>{
@@ -122,54 +117,44 @@ window.onload = function(){
             renderGames(data.data);
         }
     })
+}
 
-    // 渲染：一个游戏一个卡片 + 右侧柱状图
-    function renderGames(list){
-        let box = document.getElementById('gameList');
-        box.innerHTML = '';
+// 单独写在外面，保证能点击
+function renderGames(list){
+    let box = document.getElementById('gameList');
+    box.innerHTML = '';
 
-        // 按游戏名分组
-        let groups = {};
-        list.forEach(item => {
-            if(!groups[item.gameName]) groups[item.gameName] = [];
-            groups[item.gameName].push(item);
-        })
+    let groups = {};
+    list.forEach(item => {
+        if(!groups[item.gameName]) groups[item.gameName] = [];
+        groups[item.gameName].push(item);
+    })
 
-        for(let gameName in groups){
-            let div = document.createElement('div');
-            div.className = 'game-item';
-
-            // 右侧柱状图
-            let chart = `<div class="chart-box">
-                <div class="bar" style="height:30%"></div>
-                <div class="bar" style="height:50%"></div>
-                <div class="bar" style="height:70%"></div>
-            </div>`;
-
-            div.innerHTML = `
-                <div class="game-info">
-                    <h3>${gameName}</h3>
-                    <p>点击进入记录</p>
-                </div>
-                ${chart}
-                <div class="game-btns">
-                    <button class="btn btn-blue" onclick="goDaily('${gameName}')">每日记录</button>
-                </div>
-            `;
-            box.appendChild(div);
-        }
+    for(let name in groups){
+        let div = document.createElement('div');
+        div.className = 'game-item';
+        div.innerHTML = `
+            <div class="game-info">
+                <h3>${name}</h3>
+                <p>点击进入每日记录</p>
+            </div>
+            <div class="chart-box">
+                <div class="bar" style="height:40%"></div>
+                <div class="bar" style="height:65%"></div>
+                <div class="bar" style="height:80%"></div>
+            </div>
+            <button class="btn btn-blue" onclick="goDaily('${name}')">进入记录</button>
+        `;
+        box.appendChild(div);
     }
+}
 
-    // 跳转
-    function goAdd(){ location.href='game-config.html' }
-    function goSetting(){ location.href='setting.html' }
-    function goDaily(gameName){
-        location.href='daily.html?game='+encodeURIComponent(gameName);
-    }
-    function logout(){
-        localStorage.removeItem('gameUser');
-        location.href='login.html';
-    }
+function goDaily(gameName){
+    location.href = 'daily.html?g=' + encodeURIComponent(gameName);
+}
+function logout(){
+    localStorage.removeItem('gameUser');
+    location.href='login.html';
 }
 </script>
 
