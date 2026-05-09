@@ -6,211 +6,88 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '.')));
 
-// 内存数据库（自带所有游戏 + 抽卡规则）
+// 用户账号
 let users = [];
-let gameRecords = [
-  // 明日方舟
-  {
-    gameName: "明日方舟",
-    itemName: "合成玉",
-    itemCount: 6000,
-    itemPrice: 1,
-    totalPrice: 6000,
-    drawCost: 600,
-    drawTicket: "抽卡卷",
-    ratio: "180合成玉 = 1源石"
-  },
-  {
-    gameName: "明日方舟",
-    itemName: "源石",
-    itemCount: 100,
-    itemPrice: 180,
-    totalPrice: 18000,
-    drawCost: 600,
-    drawTicket: "抽卡卷",
-    ratio: "180合成玉 = 1源石"
-  },
-  {
-    gameName: "明日方舟",
-    itemName: "抽卡卷",
-    itemCount: 50,
-    itemPrice: 600,
-    totalPrice: 30000,
-    drawCost: 600,
-    drawTicket: "抽卡卷",
-    ratio: "180合成玉 = 1源石"
-  },
+// 全局固定游戏列表
+const baseGameList = [
+  {"gameName":"明日方舟","itemName":"合成玉","onceCost":600,"ratio":"180合成玉=1源石"},
+  {"gameName":"明日方舟","itemName":"源石","onceCost":600,"ratio":"180合成玉=1源石"},
+  {"gameName":"明日方舟","itemName":"抽卡券","onceCost":600,"ratio":"可直接一抽"},
 
-  // 明日方舟终末地
-  {
-    gameName: "明日方舟：终末地",
-    itemName: "合成玉",
-    itemCount: 5000,
-    itemPrice: 1,
-    totalPrice: 5000,
-    drawCost: 500,
-    drawTicket: "抽卡卷",
-    ratio: "90合成玉 = 1源石"
-  },
-  {
-    gameName: "明日方舟：终末地",
-    itemName: "源石",
-    itemCount: 100,
-    itemPrice: 90,
-    totalPrice: 9000,
-    drawCost: 500,
-    drawTicket: "抽卡卷",
-    ratio: "90合成玉 = 1源石"
-  },
-  {
-    gameName: "明日方舟：终末地",
-    itemName: "抽卡卷",
-    itemCount: 50,
-    itemPrice: 500,
-    totalPrice: 25000,
-    drawCost: 500,
-    drawTicket: "抽卡卷",
-    ratio: "90合成玉 = 1源石"
-  },
+  {"gameName":"明日方舟终末地","itemName":"合成玉","onceCost":500,"ratio":"90合成玉=1源石"},
+  {"gameName":"明日方舟终末地","itemName":"源石","onceCost":500,"ratio":"90合成玉=1源石"},
+  {"gameName":"明日方舟终末地","itemName":"抽卡券","onceCost":500,"ratio":"可直接一抽"},
 
-  // 鸣潮
-  {
-    gameName: "鸣潮",
-    itemName: "星声",
-    itemCount: 8000,
-    itemPrice: 1,
-    totalPrice: 8000,
-    drawCost: 160,
-    drawTicket: "抽卡卷",
-    ratio: "160 = 1抽"
-  },
-  {
-    gameName: "鸣潮",
-    itemName: "抽卡卷",
-    itemCount: 50,
-    itemPrice: 160,
-    totalPrice: 8000,
-    drawCost: 160,
-    drawTicket: "抽卡卷",
-    ratio: "160 = 1抽"
-  },
+  {"gameName":"原神","itemName":"原石","onceCost":160,"ratio":"160原石=1抽"},
+  {"gameName":"原神","itemName":"抽卡券","onceCost":160,"ratio":"可直接一抽"},
 
-  // 原神
-  {
-    gameName: "原神",
-    itemName: "原石",
-    itemCount: 8000,
-    itemPrice: 1,
-    totalPrice: 8000,
-    drawCost: 160,
-    drawTicket: "抽卡卷",
-    ratio: "160 = 1抽"
-  },
-  {
-    gameName: "原神",
-    itemName: "抽卡卷",
-    itemCount: 50,
-    itemPrice: 160,
-    totalPrice: 8000,
-    drawCost: 160,
-    drawTicket: "抽卡卷",
-    ratio: "160 = 1抽"
-  },
+  {"gameName":"崩坏星穹铁道","itemName":"星琼","onceCost":160,"ratio":"160星琼=1抽"},
+  {"gameName":"崩坏星穹铁道","itemName":"抽卡券","onceCost":160,"ratio":"可直接一抽"},
 
-  // 崩坏：星穹铁道
-  {
-    gameName: "崩坏：星穹铁道",
-    itemName: "星琼",
-    itemCount: 8000,
-    itemPrice: 1,
-    totalPrice: 8000,
-    drawCost: 160,
-    drawTicket: "抽卡卷",
-    ratio: "160 = 1抽"
-  },
-  {
-    gameName: "崩坏：星穹铁道",
-    itemName: "抽卡卷",
-    itemCount: 50,
-    itemPrice: 160,
-    totalPrice: 8000,
-    drawCost: 160,
-    drawTicket: "抽卡卷",
-    ratio: "160 = 1抽"
-  },
+  {"gameName":"鸣潮","itemName":"星声","onceCost":160,"ratio":"160星声=1抽"},
+  {"gameName":"鸣潮","itemName":"抽卡券","onceCost":160,"ratio":"可直接一抽"},
 
-  // 绝区零
-  {
-    gameName: "绝区零",
-    itemName: "菲林",
-    itemCount: 8000,
-    itemPrice: 1,
-    totalPrice: 8000,
-    drawCost: 160,
-    drawTicket: "抽卡卷",
-    ratio: "160 = 1抽"
-  },
-  {
-    gameName: "绝区零",
-    itemName: "抽卡卷",
-    itemCount: 50,
-    itemPrice: 160,
-    totalPrice: 8000,
-    drawCost: 160,
-    drawTicket: "抽卡卷",
-    ratio: "160 = 1抽"
-  }
+  {"gameName":"绝区零","itemName":"菲林","onceCost":160,"ratio":"160菲林=1抽"},
+  {"gameName":"绝区零","itemName":"抽卡券","onceCost":160,"ratio":"可直接一抽"}
 ];
 
+// 用户个人设置
 let userSettings = {};
+// 用户游戏数据：userData[账号] = {游戏名:{resCount,ticketCount,upPull,checked}}
+let userData = {};
 
 // 登录
 app.post('/api/login', (req, res) => {
   const { username, pwd } = req.body;
-  const user = users.find(u => u.username === username && u.pwd === pwd);
-  if (user) {
-    res.json({ code: 0, msg: "登录成功", data: { username } });
-  } else {
-    res.json({ code: 1, msg: "账号或密码错误" });
+  const u = users.find(x => x.username === username && x.pwd === pwd);
+  if(u){
+    return res.json({ code:0, msg:"登录成功", data:{username} });
   }
+  res.json({ code:1, msg:"账号密码错误" });
 });
 
 // 注册
 app.post('/api/register', (req, res) => {
   const { username, pwd } = req.body;
-  if (users.find(u => u.username === username)) {
-    res.json({ code: 1, msg: "用户名已存在" });
-    return;
+  if(users.find(x => x.username === username)){
+    return res.json({ code:1, msg:"用户名已存在" });
   }
-  users.push({ username, pwd });
-  res.json({ code: 0, msg: "注册成功" });
+  users.push({username,pwd});
+  // 初始化空数据
+  if(!userData[username]) userData[username] = {};
+  res.json({ code:0, msg:"注册成功" });
 });
 
-// 获取游戏列表
+// 获取固定游戏列表
 app.get('/api/games', (req, res) => {
-  res.json({ code: 0, data: gameRecords });
+  res.json({ code:0, data:baseGameList });
 });
 
-// 添加游戏
-app.post('/api/games', (req, res) => {
-  gameRecords.push(req.body);
-  res.json({ code: 0, msg: "保存成功" });
-});
-
-// 保存设置
+// 保存个人设置
 app.post('/api/saveSettings', (req, res) => {
-  const { username } = req.body;
-  userSettings[username] = req.body;
-  res.json({ code: 0, msg: "设置保存成功" });
+  const { username, nickname, avatar } = req.body;
+  userSettings[username] = { nickname, avatar };
+  res.json({ code:0, msg:"保存成功" });
 });
 
-// 获取设置
+// 获取个人设置
 app.post('/api/getSettings', (req, res) => {
   const { username } = req.body;
-  res.json({ code: 0, data: userSettings[username] || {} });
+  res.json({ code:0, data:userSettings[username]||{} });
 });
 
-// 启动
-app.listen(port, () => {
-  console.log("服务启动成功 ✅");
+// 保存用户游戏数据
+app.post('/api/saveGameData', (req, res) => {
+  const { username, gameName, resCount, ticketCount, upPull, checked } = req.body;
+  if(!userData[username]) userData[username] = {};
+  userData[username][gameName] = { resCount, ticketCount, upPull, checked };
+  res.json({ code:0, msg:"数据已同步" });
 });
+
+// 获取用户游戏数据
+app.post('/api/getGameData', (req, res) => {
+  const { username } = req.body;
+  res.json({ code:0, data:userData[username]||{} });
+});
+
+app.listen(port, ()=>console.log("服务启动成功"));
