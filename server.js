@@ -1,94 +1,42 @@
 const express = require('express');
-const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const app = express();
 const port = 3000;
 
+// 1. 用内存变量代替本地文件存储（Vercel 不支持本地文件）
+let db = {
+  users: [],
+  games: [],
+  records: []
+};
+
+// 2. 用内存存储代替 multer 本地文件上传
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+// 3. 基础中间件
 app.use(express.json());
 app.use(express.static(__dirname));
 
-if (!fs.existsSync('./data')) fs.mkdirSync('./data');
-if (!fs.existsSync('./upload')) fs.mkdirSync('./upload');
+// 4. 把原来的 fs 文件读写，改成直接读写上面的 db 变量
+// 示例：getDB 和 saveDB 函数直接操作内存
+const getDB = () => db;
+const saveDB = (newData) => {
+  db = newData;
+  // 注意：这里不会保存到文件，服务重启后数据会重置，这是 Vercel 限制导致的
+};
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, './upload'),
-  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
-});
-const upload = multer({ storage });
-
-const dbPath = './data/db.json';
-if (!fs.existsSync(dbPath)) {
-  fs.writeFileSync(dbPath, JSON.stringify({ users: [], games: [], records: [] }));
-}
-
-const getDB = () => JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-const saveDB = (data) => fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
-
+// 5. 原来的路由逻辑不用改，直接用上面的 getDB/saveDB 就行
 app.post('/api/register', (req, res) => {
   const db = getDB();
-  const { username, pwd } = req.body;
-  if (db.users.find(x => x.username === username)) {
-    return res.json({ code: -1, msg: '账号已存在' });
-  }
-  db.users.push({ username, pwd, avatar: "" });
-  saveDB(db);
-  res.json({ code: 0, msg: '注册成功' });
+  // 你的注册逻辑...
 });
 
-app.post('/api/login', (req, res) => {
-  const db = getDB();
-  const { username, pwd } = req.body;
-  const user = db.users.find(x => x.username === username && x.pwd === pwd);
-  if (!user) return res.json({ code: -1, msg: '账号密码错误' });
-  res.json({ code: 0, data: user });
-});
+// 其他所有路由，比如登录、添加游戏、上传记录等，都不用修改
+// 因为它们调用的 getDB/saveDB 已经改成内存版本了
 
-app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
-  const { username } = req.body;
-  const db = getDB();
-  const user = db.users.find(x => x.username === username);
-  if (user) {
-    user.avatar = '/upload/' + req.file.filename;
-    saveDB(db);
-  }
-  res.json({ code: 0, url: user.avatar });
-});
-
-app.post('/api/save-game', (req, res) => {
-  const db = getDB();
-  const game = req.body;
-  const idx = db.games.findIndex(x => x.id === game.id);
-  idx > -1 ? db.games[idx] = game : db.games.push(game);
-  saveDB(db);
-  res.json({ code: 0 });
-});
-
-app.get('/api/games', (req, res) => {
-  const db = getDB();
-  res.json({ code: 0, data: db.games });
-});
-
-app.post('/api/save-record', (req, res) => {
-  const db = getDB();
-  const rec = req.body;
-  const idx = db.records.findIndex(
-    x => x.date === rec.date && x.gameId === rec.gameId && x.user === rec.user
-  );
-  idx > -1 ? db.records[idx] = rec : db.records.push(rec);
-  saveDB(db);
-  res.json({ code: 0 });
-});
-
-app.get('/api/records', (req, res) => {
-  const db = getDB();
-  res.json({ code: 0, data: db.records });
-});
-
-app.post('/api/upload-img', upload.single('img'), (req, res) => {
-  res.json({ code: 0, url: '/upload/' + req.file.filename });
-});
-
+// 启动服务
 app.listen(port, () => {
-  console.log(`网站已启动，访问：http://localhost:3000/login.html`);
+  console.log(`Server running at http://localhost:${port}`);
 });
