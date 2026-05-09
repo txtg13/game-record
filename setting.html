@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人设置</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+        body{background:#f5f5f5;padding:20px}
+        .container{max-width:500px;margin:0 auto;background:white;padding:25px;border-radius:10px}
+        h2{text-align:center;margin-bottom:20px}
+        input{width:100%;padding:10px;margin:10px 0;border:1px solid #ddd;border-radius:6px}
+        button{width:100%;padding:12px;background:#4285f4;color:white;border:none;border-radius:6px;margin-top:10px;cursor:pointer}
+        .back{background:#666}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>个人设置</h2>
+        <input type="text" id="nickname" placeholder="输入你的昵称">
+        <input type="text" id="avatar" placeholder="输入头像图片链接">
+        <button onclick="saveSettings()">保存设置</button>
+        <button class="back" onclick="location.href='index.html'">返回首页</button>
+    </div>
+
+    <script>
+        window.onload = function(){
+            let user = JSON.parse(localStorage.getItem('gameUser') || '{}');
+            if(!user.username){
+                location.href='login.html';
+                return;
+            }
+
+            // 加载已有设置
+            fetch('/api/getSettings',{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({username:user.username})
+            }).then(res=>res.json()).then(data=>{
+                if(data.data){
+                    document.getElementById('nickname').value = data.data.nickname || '';
+                    document.getElementById('avatar').value = data.data.avatar || '';
+                }
+            })
+        }
+
+        function saveSettings(){
+            let user = JSON.parse(localStorage.getItem('gameUser'));
+            let nickname = document.getElementById('nickname').value;
+            let avatar = document.getElementById('avatar').value;
+
+            fetch('/api/saveSettings',{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({
+                    username:user.username,
+nickname:nickname,
+avatar:avatar
+                })
+            }).then(res=>res.json()).then(data=>{
+                alert(data.msg || '保存成功');
+                location.href='index.html';
+            })
+        }
+    </script>
+</body>
+</html>
