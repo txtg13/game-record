@@ -1,64 +1,67 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>游戏配置</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:微软雅黑}
-body{background:#f5f7fa;padding:20px}
-.box{max-width:400px;background:white;padding:20px;border-radius:12px;margin:0 auto}
-input{width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:6px}
-.btn{width:100%;padding:12px;background:#2563eb;color:white;border:none;border-radius:6px;margin-top:10px}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新增游戏配置</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial; }
+        body { background: #f5f5f5; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { background: white; padding: 30px; border-radius: 10px; width: 100%; max-width: 600px; }
+        input { display: block; width: 100%; margin: 15px 0; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; }
+        .btn-blue { background: #4285f4; color: white; border: none; padding: 12px; border-radius: 5px; width: 100%; font-size: 16px; margin-top: 10px; cursor: pointer; }
+        .btn-gray { background: #666; color: white; border: none; padding: 12px; border-radius: 5px; width: 100%; font-size: 16px; margin-top: 10px; cursor: pointer; }
+    </style>
 </head>
 <body>
-<div class="box">
-  <input id="name" placeholder="游戏名称">
-  <input id="resName" placeholder="资源名称（如原石/合成玉/星琼）">
-  <input id="singleCost" placeholder="单抽消耗">
-  <input id="upMax" placeholder="UP池保底次数">
-  <input id="normalMax" placeholder="常驻池保底次数">
-  <button class="btn" onclick="save()">保存配置</button>
-  <button class="btn" style="background:#666" onclick="location.href='index.html'">返回</button>
-</div>
+    <div class="container">
+        <input type="text" id="gameName" placeholder="游戏名称" value="原神">
+        <input type="text" id="itemName" placeholder="物品名称" value="原石">
+        <input type="number" id="itemCount" placeholder="数量" value="160">
+        <input type="number" id="itemPrice" placeholder="单价" value="90">
+        <input type="number" id="totalPrice" placeholder="总价" value="90">
+        
+        <button class="btn-blue" onclick="saveGame()">保存配置</button>
+        <button class="btn-gray" onclick="location.href='index.html'">返回</button>
+    </div>
 
-<script>
-let user = JSON.parse(localStorage.gameUser||"{}");
-if(!user.username)location.href='login.html';
+    <script>
+        function saveGame() {
+            const gameName = document.getElementById('gameName').value;
+            const itemName = document.getElementById('itemName').value;
+            const itemCount = document.getElementById('itemCount').value;
+            const itemPrice = document.getElementById('itemPrice').value;
+            const totalPrice = document.getElementById('totalPrice').value;
 
-let id = new URLSearch(location.search).get("id");
+            if (!gameName || !itemName) {
+                alert('游戏名称和物品名称不能为空');
+                return;
+            }
 
-async function load(){
-  let res = await fetch("/api/games");
-  let json = await res.json();
-  let g = json.data.find(x=>x.id==id);
-  if(!g)return;
-  document.getElementById("name").value = g.name;
-  document.getElementById("resName").value = g.resName;
-  document.getElementById("singleCost").value = g.singleCost;
-  document.getElementById("upMax").value = g.upMax;
-  document.getElementById("normalMax").value = g.normalMax;
-}
-
-async function save(){
-  let data = {
-    id:id||Date.now().toString(),
-    name:document.getElementById("name").value,
-    resName:document.getElementById("resName").value,
-    singleCost:document.getElementById("singleCost").value,
-    upMax:document.getElementById("upMax").value,
-    normalMax:document.getElementById("normalMax").value
-  };
-  await fetch("/api/save-game",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(data)
-  });
-  alert("保存成功");
-  location.href="index.html";
-}
-
-if(id)load();
-</script>
+            fetch('/api/games', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    gameName,
+                    itemName,
+                    itemCount,
+                    itemPrice,
+                    totalPrice
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.code === 0) {
+                    alert('保存成功！');
+                    location.href = 'index.html';
+                } else {
+                    alert(data.msg || '保存失败，请重试');
+                }
+            })
+            .catch(err => {
+                alert('网络错误，请稍后再试');
+            });
+        }
+    </script>
+</body>
 </html>
