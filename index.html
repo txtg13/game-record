@@ -36,7 +36,6 @@
         .row input{width:130px;padding:5px;border:1px solid #ccc;border-radius:4px;font-size:14px}
         .check-box{display:flex;align-items:center;gap:5px;font-size:14px;margin:6px 0 10px}
 
-        /* 动态柱状图容器 */
         .chart-container{
             width:100px;
             height:70px;
@@ -75,7 +74,7 @@
 <script>
 let currUser = "";
 let allGameData = {};
-// 柱状图封顶值，可自己调
+let gameList = [];
 const MAX_BASE = 20000;
 
 function logout(){
@@ -105,29 +104,29 @@ window.onload = function(){
     fetch('/api/games')
     .then(res=>res.json())
     .then(gamesRes=>{
+        gameList = gamesRes.data;
         fetch('/api/getGameData',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({username:currUser})
         }).then(res=>res.json()).then(userRes=>{
             allGameData = userRes.data;
-            renderGames(gamesRes.data);
+            renderGames();
         })
     })
 }
 
-// 计算柱子高度百分比
 function getHeight(val){
     let num = Number(val) || 0;
     let per = (num / MAX_BASE) * 100;
     return Math.min(100, per) + '%';
 }
 
-function renderGames(list){
+function renderGames(){
     let box = document.getElementById('gameList');
     box.innerHTML = '';
 
-    list.forEach(item=>{
+    gameList.forEach(item=>{
         let gameName = item.gameName;
         let d = allGameData[gameName] || {
             resCount:0, stoneCount:0, ticketCount:0, upPull:0, checked:false
@@ -203,7 +202,6 @@ function renderGames(list){
     })
 }
 
-// 保存数据到服务器
 function saveData(gameName){
     let res = Number(document.getElementById(`res_${gameName}`).value||0);
     let stoneEle = document.getElementById(`stone_${gameName}`);
@@ -225,15 +223,15 @@ function saveData(gameName){
             checked
         })
     }).then(()=>{
-        alert('保存成功，已同步！');
-        // 刷新数据和柱状图
+        // 重新拉取数据并渲染，不会空白
         fetch('/api/getGameData',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({username:currUser})
         }).then(res=>res.json()).then(userRes=>{
             allGameData = userRes.data;
-            renderGames(userRes.data);
+            renderGames();
+            alert('保存成功！');
         })
     })
 }
