@@ -15,13 +15,47 @@
         .btn-blue{background:#4285f4}
         .btn-gray{background:#666}
         .btn-red{background:#e53935}
-        .game-item{background:white;border-radius:10px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
-        .game-info{flex:1;min-width:220px}
-        .game-info h3{margin-bottom:6px;font-size:17px}
-        .game-info p{color:#666;font-size:14px;margin:3px 0}
-        .chart-box{width:80px;height:50px;display:flex;align-items:flex-end;gap:4px}
-        .bar{width:12px;background:#4285f4;border-radius:2px 2px 0 0}
-        .check-box{display:flex;align-items:center;gap:5px;font-size:14px;margin:6px 0}
+        .btn-sm{padding:4px 10px;font-size:12px;margin-top:8px}
+
+        .game-item{
+            background:#fff;
+            border-radius:10px;
+            padding:16px;
+            margin-bottom:12px;
+            box-shadow:0 1px 3px rgba(0,0,0,0.1);
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap:20px;
+            flex-wrap:wrap;
+        }
+        .game-info{flex:1;min-width:240px}
+        .game-info h3{margin-bottom:8px;font-size:17px}
+        .row{display:flex;align-items:center;margin:6px 0}
+        .row label{width:90px;font-size:14px;color:#333}
+        .row input{width:130px;padding:5px;border:1px solid #ccc;border-radius:4px;font-size:14px}
+        .check-box{display:flex;align-items:center;gap:5px;font-size:14px;margin:6px 0 10px}
+
+        /* 动态柱状图容器 */
+        .chart-container{
+            width:100px;
+            height:70px;
+            display:flex;
+            align-items:flex-end;
+            justify-content:center;
+            gap:8px;
+            border-left:1px solid #eee;
+            border-bottom:1px solid #eee;
+            padding:0 5px;
+        }
+        .bar{
+            width:22px;
+            border-radius:3px 3px 0 0;
+            transition:height 0.3s ease;
+        }
+        .bar1{background:#4285f4}
+        .bar2{background:#34c759}
+        .bar3{background:#ff9500}
     </style>
 </head>
 <body>
@@ -32,7 +66,6 @@
     </div>
     <div class="top-right">
         <input type="date" id="calendar">
-        <button class="btn btn-blue" onclick="location.href='game-config.html'">添加游戏</button>
         <button class="btn btn-gray" onclick="location.href='setting.html'">设置</button>
         <button class="btn btn-red" onclick="logout()">退出</button>
     </div>
@@ -42,10 +75,9 @@
 <script>
 let currUser = "";
 let allGameData = {};
+// 柱状图封顶值，可自己调
+const MAX_BASE = 20000;
 
-function goDaily(gameName){
-    location.href = 'daily.html?game=' + encodeURIComponent(gameName);
-}
 function logout(){
     localStorage.removeItem('gameUser');
     location.href='login.html';
@@ -84,13 +116,22 @@ window.onload = function(){
     })
 }
 
+// 计算柱子高度百分比
+function getHeight(val){
+    let num = Number(val) || 0;
+    let per = (num / MAX_BASE) * 100;
+    return Math.min(100, per) + '%';
+}
+
 function renderGames(list){
     let box = document.getElementById('gameList');
     box.innerHTML = '';
 
     list.forEach(item=>{
         let gameName = item.gameName;
-        let data = allGameData[gameName] || {resCount:0, stoneCount:0, ticketCount:0, upPull:0, checked:false};
+        let d = allGameData[gameName] || {
+            resCount:0, stoneCount:0, ticketCount:0, upPull:0, checked:false
+        };
 
         let div = document.createElement('div');
         div.className = 'game-item';
@@ -100,54 +141,99 @@ function renderGames(list){
             <div class="game-info">
                 <h3>${gameName}</h3>
                 <div class="check-box">
-                    <input type="checkbox" id="c_${gameName}" ${data.checked?'checked':''} onchange="saveCheck('${gameName}')">
+                    <input type="checkbox" id="chk_${gameName}" ${d.checked?'checked':''}>
                     <label>今日是否登录游玩</label>
                 </div>
-                <p>抽卡资源：合成玉：${data.resCount} / 源石：${data.stoneCount}</p>
-                <p>抽卡券：${data.ticketCount}</p>
-                <p>UP池已抽：${data.upPull} 发</p>
+                <div class="row">
+                    <label>合成玉：</label>
+                    <input type="number" id="res_${gameName}" value="${d.resCount}" min="0">
+                </div>
+                <div class="row">
+                    <label>源石：</label>
+                    <input type="number" id="stone_${gameName}" value="${d.stoneCount}" min="0">
+                </div>
+                <div class="row">
+                    <label>抽卡券：</label>
+                    <input type="number" id="ticket_${gameName}" value="${d.ticketCount}" min="0">
+                </div>
+                <div class="row">
+                    <label>UP已抽：</label>
+                    <input type="number" id="up_${gameName}" value="${d.upPull}" min="0">
+                    <span style="margin-left:4px">发</span>
+                </div>
+                <button class="btn btn-blue btn-sm" onclick="saveData('${gameName}')">立即保存</button>
             </div>
-            <div class="chart-box">
-                <div class="bar" style="height:45%"></div>
-                <div class="bar" style="height:70%"></div>
-                <div class="bar" style="height:85%"></div>
+            <div class="chart-container">
+                <div class="bar bar1" style="height:${getHeight(d.resCount)}"></div>
+                <div class="bar bar2" style="height:${getHeight(d.stoneCount)}"></div>
+                <div class="bar bar3" style="height:${getHeight(d.ticketCount)}"></div>
             </div>
-            <button class="btn btn-blue" onclick="goDaily('${gameName}')">修改数据</button>
             `;
         }else{
             div.innerHTML = `
             <div class="game-info">
                 <h3>${gameName}</h3>
                 <div class="check-box">
-                    <input type="checkbox" id="c_${gameName}" ${data.checked?'checked':''} onchange="saveCheck('${gameName}')">
+                    <input type="checkbox" id="chk_${gameName}" ${d.checked?'checked':''}>
                     <label>今日是否登录游玩</label>
                 </div>
-                <p>抽卡资源：${data.resCount}</p>
-                <p>抽卡券：${data.ticketCount}</p>
-                <p>UP池已抽：${data.upPull} 发</p>
+                <div class="row">
+                    <label>抽卡资源：</label>
+                    <input type="number" id="res_${gameName}" value="${d.resCount}" min="0">
+                </div>
+                <div class="row">
+                    <label>抽卡券：</label>
+                    <input type="number" id="ticket_${gameName}" value="${d.ticketCount}" min="0">
+                </div>
+                <div class="row">
+                    <label>UP已抽：</label>
+                    <input type="number" id="up_${gameName}" value="${d.upPull}" min="0">
+                    <span style="margin-left:4px">发</span>
+                </div>
+                <button class="btn btn-blue btn-sm" onclick="saveData('${gameName}')">立即保存</button>
             </div>
-            <div class="chart-box">
-                <div class="bar" style="height:45%"></div>
-                <div class="bar" style="height:70%"></div>
-                <div class="bar" style="height:85%"></div>
+            <div class="chart-container">
+                <div class="bar bar1" style="height:${getHeight(d.resCount)}"></div>
+                <div class="bar bar2" style="height:${getHeight(d.ticketCount)}"></div>
+                <div class="bar bar3" style="height:${getHeight(d.upPull * 100)}"></div>
             </div>
-            <button class="btn btn-blue" onclick="goDaily('${gameName}')">修改数据</button>
             `;
         }
         box.appendChild(div);
     })
 }
 
-function saveCheck(gameName){
-    let checked = document.getElementById('c_'+gameName).checked;
-    let d = allGameData[gameName] || {resCount:0, stoneCount:0, ticketCount:0, upPull:0};
+// 保存数据到服务器
+function saveData(gameName){
+    let res = Number(document.getElementById(`res_${gameName}`).value||0);
+    let stoneEle = document.getElementById(`stone_${gameName}`);
+    let stone = stoneEle ? Number(stoneEle.value||0) : 0;
+    let ticket = Number(document.getElementById(`ticket_${gameName}`).value||0);
+    let up = Number(document.getElementById(`up_${gameName}`).value||0);
+    let checked = document.getElementById(`chk_${gameName}`).checked;
+
     fetch('/api/saveGameData',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
-            username:currUser, gameName,
-            resCount:d.resCount, stoneCount:d.stoneCount,
-            ticketCount:d.ticketCount, upPull:d.upPull, checked
+            username:currUser,
+            gameName,
+            resCount:res,
+            stoneCount:stone,
+            ticketCount:ticket,
+            upPull:up,
+            checked
+        })
+    }).then(()=>{
+        alert('保存成功，已同步！');
+        // 刷新数据和柱状图
+        fetch('/api/getGameData',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({username:currUser})
+        }).then(res=>res.json()).then(userRes=>{
+            allGameData = userRes.data;
+            renderGames(userRes.data);
         })
     })
 }
