@@ -3,78 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>修改游戏当前抽卡数据</title>
+    <title>修改游戏数据</title>
     <style>
-        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
-        .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 10px; }
-        h2 { margin-bottom: 20px; text-align: center; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 6px; color: #fff; font-size: 16px; cursor: pointer; margin-top:10px; }
-        .btn-save { background: #4285f4; }
-        .btn-back { background: #666; }
+        body{font-family:Arial;padding:20px;background:#f5f5f5}
+        .container{max-width:500px;margin:0 auto;background:#fff;padding:25px;border-radius:10px}
+        h2{text-align:center;margin-bottom:20px}
+        input{width:100%;padding:10px;margin:10px 0;border:1px solid #ddd;border-radius:6px}
+        button{width:100%;padding:12px;border:none;border-radius:6px;color:#fff;cursor:pointer;margin-top:10px}
+        .btn-save{background:#4285f4}
+        .btn-back{background:#666}
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2 id="gameTitle">游戏名称</h2>
-        <input type="number" id="resCount" placeholder="当前抽卡资源总数">
-        <input type="number" id="ticketCount" placeholder="抽卡券总数">
-        <input type="number" id="upPull" placeholder="UP池已抽发数">
-        <button class="btn-save" onclick="saveData()">保存当前数据</button>
-        <button class="btn-back" onclick="location.href='index.html'">返回主页</button>
-    </div>
+<div class="container">
+    <h2 id="title">游戏名称</h2>
+    <input type="number" id="res" placeholder="抽卡资源 / 合成玉">
+    <input type="number" id="stone" placeholder="源石">
+    <input type="number" id="ticket" placeholder="抽卡券">
+    <input type="number" id="up" placeholder="UP池已抽发数">
+    <button class="btn-save" onclick="save()">保存</button>
+    <button class="btn-back" onclick="location.href='index.html'">返回</button>
+</div>
 
-    <script>
-        let gameName = '';
-        let currUser = "";
-        let oldChecked = false;
+<script>
+let gameName = "";
+let currUser = "";
 
-        window.onload = function(){
-            let user = JSON.parse(localStorage.getItem('gameUser') || '{}');
-            if(!user.username){
-                location.href='login.html';
-                return;
-            }
-            currUser = user.username;
-            let urlParams = new URLSearchParams(location.search);
-            gameName = urlParams.get('game') || '';
-            document.getElementById('gameTitle').innerText = gameName;
+window.onload = function(){
+    let user = JSON.parse(localStorage.getItem('gameUser')||'{}');
+    if(!user.username){ location.href='login.html'; return; }
+    currUser = user.username;
+    gameName = new URLSearchParams(location.search).get('game');
+    document.getElementById('title').innerText = gameName;
 
-            // 拉取服务器数据回填
-            fetch('/api/getGameData',{
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({username:currUser})
-            }).then(res=>res.json()).then(userRes=>{
-                let data = userRes.data[gameName] || {resCount:0,ticketCount:0,upPull:0,checked:false};
-                oldChecked = data.checked;
-                document.getElementById('resCount').value = data.resCount;
-                document.getElementById('ticketCount').value = data.ticketCount;
-                document.getElementById('upPull').value = data.upPull;
-            })
-        }
+    fetch('/api/getGameData',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({username:currUser})
+    }).then(res=>res.json()).then(data=>{
+        let d = data.data[gameName] || {resCount:0,stoneCount:0,ticketCount:0,upPull:0};
+        document.getElementById('res').value = d.resCount;
+        document.getElementById('stone').value = d.stoneCount;
+        document.getElementById('ticket').value = d.ticketCount;
+        document.getElementById('up').value = d.upPull;
+    })
+}
 
-        function saveData(){
-            let res = document.getElementById('resCount').value || 0;
-            let ticket = document.getElementById('ticketCount').value || 0;
-            let up = document.getElementById('upPull').value || 0;
+function save(){
+    let res = Number(document.getElementById('res').value||0);
+    let stone = Number(document.getElementById('stone').value||0);
+    let ticket = Number(document.getElementById('ticket').value||0);
+    let up = Number(document.getElementById('up').value||0);
 
-            fetch('/api/saveGameData',{
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({
-                    username:currUser,
-                    gameName:gameName,
-                    resCount:Number(res),
-                    ticketCount:Number(ticket),
-                    upPull:Number(up),
-                    checked:oldChecked
-                })
-            }).then(()=>{
-                alert('保存成功！手机电脑已互通同步');
-                location.href = 'index.html';
-            })
-        }
-    </script>
+    fetch('/api/saveGameData',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            username:currUser, gameName,
+            resCount:res, stoneCount:stone,
+            ticketCount:ticket, upPull:up, checked:false
+        })
+    }).then(()=>{
+        alert('保存成功！手机电脑已同步');
+        location.href='index.html';
+    })
+}
+</script>
 </body>
 </html>
