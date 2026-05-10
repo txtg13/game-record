@@ -59,7 +59,6 @@ window.onload = function(){
     }
     currUser = user.username;
 
-    // 加载头像昵称
     fetch('/api/getSettings',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -71,11 +70,9 @@ window.onload = function(){
 
     document.getElementById('calendar').valueAsDate = new Date();
 
-    // 先拿固定游戏列表
     fetch('/api/games')
     .then(res=>res.json())
     .then(gamesRes=>{
-        // 再拿该用户的服务器保存数据
         fetch('/api/getGameData',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
@@ -90,51 +87,67 @@ window.onload = function(){
 function renderGames(list){
     let box = document.getElementById('gameList');
     box.innerHTML = '';
-    let groups = {};
-    list.forEach(item=>{
-        if(!groups[item.gameName]) groups[item.gameName] = [];
-    })
 
-    for(let name in groups){
-        let save = allGameData[name] || {resCount:0,ticketCount:0,upPull:0,checked:false};
+    list.forEach(item=>{
+        let gameName = item.gameName;
+        let data = allGameData[gameName] || {resCount:0, stoneCount:0, ticketCount:0, upPull:0, checked:false};
+
         let div = document.createElement('div');
         div.className = 'game-item';
-        div.innerHTML = `
+
+        if(gameName === "明日方舟" || gameName === "明日方舟终末地"){
+            div.innerHTML = `
             <div class="game-info">
-                <h3>${name}</h3>
+                <h3>${gameName}</h3>
                 <div class="check-box">
-                    <input type="checkbox" id="play_${name}" ${save.checked?'checked':''} onchange="saveCheck('${name}')">
-                    <label for="play_${name}">此游戏今日是否登录并游玩</label>
+                    <input type="checkbox" id="c_${gameName}" ${data.checked?'checked':''} onchange="saveCheck('${gameName}')">
+                    <label>今日是否登录游玩</label>
                 </div>
-                <p>当前抽卡资源：${save.resCount}</p>
-                <p>抽卡券数量：${save.ticketCount}</p>
-                <p>UP池已抽发数：${save.upPull}</p>
+                <p>抽卡资源：合成玉：${data.resCount} / 源石：${data.stoneCount}</p>
+                <p>抽卡券：${data.ticketCount}</p>
+                <p>UP池已抽：${data.upPull} 发</p>
             </div>
             <div class="chart-box">
                 <div class="bar" style="height:45%"></div>
                 <div class="bar" style="height:70%"></div>
                 <div class="bar" style="height:85%"></div>
             </div>
-            <button class="btn btn-blue" onclick="goDaily('${name}')">修改当前数据</button>
-        `;
+            <button class="btn btn-blue" onclick="goDaily('${gameName}')">修改数据</button>
+            `;
+        }else{
+            div.innerHTML = `
+            <div class="game-info">
+                <h3>${gameName}</h3>
+                <div class="check-box">
+                    <input type="checkbox" id="c_${gameName}" ${data.checked?'checked':''} onchange="saveCheck('${gameName}')">
+                    <label>今日是否登录游玩</label>
+                </div>
+                <p>抽卡资源：${data.resCount}</p>
+                <p>抽卡券：${data.ticketCount}</p>
+                <p>UP池已抽：${data.upPull} 发</p>
+            </div>
+            <div class="chart-box">
+                <div class="bar" style="height:45%"></div>
+                <div class="bar" style="height:70%"></div>
+                <div class="bar" style="height:85%"></div>
+            </div>
+            <button class="btn btn-blue" onclick="goDaily('${gameName}')">修改数据</button>
+            `;
+        }
         box.appendChild(div);
-    }
+    })
 }
 
-// 勾选状态实时保存到服务器
 function saveCheck(gameName){
-    let ck = document.getElementById('play_'+gameName).checked;
-    let d = allGameData[gameName] || {resCount:0,ticketCount:0,upPull:0};
+    let checked = document.getElementById('c_'+gameName).checked;
+    let d = allGameData[gameName] || {resCount:0, stoneCount:0, ticketCount:0, upPull:0};
     fetch('/api/saveGameData',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
-            username:currUser,
-            gameName:gameName,
-            resCount:d.resCount,
-            ticketCount:d.ticketCount,
-            upPull:d.upPull,
-            checked:ck
+            username:currUser, gameName,
+            resCount:d.resCount, stoneCount:d.stoneCount,
+            ticketCount:d.ticketCount, upPull:d.upPull, checked
         })
     })
 }
