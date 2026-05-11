@@ -82,6 +82,33 @@ function logout(){
     location.href='login.html';
 }
 
+// ==============================================
+// 每日凌晨4点 自动重置【今日是否登录】为未勾选
+// 资源、抽卡数、所有数据 完全不变
+// ==============================================
+function autoResetDailyCheck() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+    const hour = now.getHours();
+    const todayKey = `${year}-${month}-${day}`;
+
+    let resetRecord = JSON.parse(localStorage.getItem('dailyResetRecord') || '{}');
+    let userReset = resetRecord[currUser] || '';
+
+    // 每天 04:00 后自动重置一次
+    if (hour >= 4 && userReset !== todayKey) {
+        for (let game in allGameData) {
+            if (allGameData[game]?.checked !== undefined) {
+                allGameData[game].checked = false;
+            }
+        }
+        resetRecord[currUser] = todayKey;
+        localStorage.setItem('dailyResetRecord', JSON.stringify(resetRecord));
+    }
+}
+
 window.onload = function(){
     let user = JSON.parse(localStorage.getItem('gameUser') || '{}');
     if(!user.username){
@@ -111,6 +138,10 @@ window.onload = function(){
             body:JSON.stringify({username:currUser})
         }).then(res=>res.json()).then(userRes=>{
             allGameData = userRes.data;
+            
+            // 执行每日自动重置
+            autoResetDailyCheck();
+            
             renderGames();
         })
     })
@@ -223,7 +254,6 @@ function saveData(gameName){
             checked
         })
     }).then(()=>{
-        // 重新拉取数据并渲染，不会空白
         fetch('/api/getGameData',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
