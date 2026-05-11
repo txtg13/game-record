@@ -73,145 +73,110 @@
 
 <script>
 let currUser = "";
-let allGameData = {};
 let gameList = [];
+let allData = {};
 const MAX_BASE = 20000;
-// 当前选中的日期
-let selectDate = '';
+let selectDate = "";
 
-function logout(){
+function logout() {
     localStorage.removeItem('gameUser');
-    location.href='login.html';
+    location.href = 'login.html';
 }
 
-// 凌晨4点只重置今日登录勾选，不碰资源
-function autoResetDailyCheck() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const day = now.getDate();
-    const hour = now.getHours();
-    const todayKey = `${year}-${month}-${day}`;
-
-    let resetRecord = JSON.parse(localStorage.getItem('dailyResetRecord') || '{}');
-    let userReset = resetRecord[currUser] || '';
-
-    if (hour >= 4 && userReset !== todayKey) {
-        for (let game in allGameData) {
-            if (allGameData[game]?.checked !== undefined) {
-                allGameData[game].checked = false;
-            }
-        }
-        resetRecord[currUser] = todayKey;
-        localStorage.setItem('dailyResetRecord', JSON.stringify(resetRecord));
-    }
-}
-
-// 格式化日期为 YYYY-MM-DD
-function formatDate(d){
+function formatDate(d) {
     let y = d.getFullYear();
-    let m = String(d.getMonth()+1).padStart(2,'0');
-    let day = String(d.getDate()).padStart(2,'0');
+    let m = String(d.getMonth() + 1).padStart(2, '0');
+    let day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
 }
 
-// 切换日历重新渲染
-function bindCalendar(){
-    let cal = document.getElementById('calendar');
-    cal.addEventListener('change',function(){
-        selectDate = this.value;
-        renderGames();
-    });
-}
-
-window.onload = function(){
+window.onload = function () {
     let user = JSON.parse(localStorage.getItem('gameUser') || '{}');
-    if(!user.username){
-        location.href='login.html';
+    if (!user.username) {
+        location.href = 'login.html';
         return;
     }
     currUser = user.username;
 
-    // 默认选中今天
-    let today = formatDate(new Date());
-    selectDate = today;
-    document.getElementById('calendar').value = today;
+    selectDate = formatDate(new Date());
+    document.getElementById('calendar').value = selectDate;
 
-    // 绑定日历切换事件
-    bindCalendar();
+    // 日历切换
+    document.getElementById('calendar').addEventListener('change', function () {
+        selectDate = this.value;
+        render();
+    });
 
-    fetch('/api/getSettings',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({username:currUser})
-    }).then(res=>res.json()).then(data=>{
+    fetch('/api/getSettings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: currUser })
+    }).then(res => res.json()).then(data => {
         document.getElementById('nickname').innerText = data.data?.nickname || currUser;
         document.getElementById('avatar').src = data.data?.avatar || 'https://via.placeholder.com/45';
     })
 
     fetch('/api/games')
-    .then(res=>res.json())
-    .then(gamesRes=>{
-        gameList = gamesRes.data;
-        fetch('/api/getGameData',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({username:currUser})
-        }).then(res=>res.json()).then(userRes=>{
-            allGameData = userRes.data;
-            autoResetDailyCheck();
-            renderGames();
+        .then(res => res.json())
+        .then(res => {
+            gameList = res.data;
+            loadData();
         })
-    })
+};
+
+function loadData() {
+    fetch('/api/getGameData', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: currUser, date: selectDate })
+    }).then(res => res.json()).then(res => {
+        allData = res.data || {};
+        render();
+    });
 }
 
-function getHeight(val){
-    let num = Number(val) || 0;
-    let per = (num / MAX_BASE) * 100;
-    return Math.min(100, per) + '%';
+function getHeight(v) {
+    let num = Number(v) || 0;
+    return Math.min(100, (num / MAX_BASE) * 100) + '%';
 }
 
-function renderGames(){
+function render() {
     let box = document.getElementById('gameList');
     box.innerHTML = '';
 
-    gameList.forEach(item=>{
-        let gameName = item.gameName;
-        // 按选中日期取对应历史数据，没有就用初始空数据
-        let dateKey = selectDate;
-        let d = allGameData[gameName]?.history?.[dateKey] || {
-            resCount:0, stoneCount:0, ticketCount:0, upPull:0, checked:false
-        };
+    gameList.forEach(g => {
+        let name = g.gameName;
+        let d = allData[name] || { resCount: 0, stoneCount: 0, ticketCount: 0, upPull: 0, checked: false };
 
         let div = document.createElement('div');
         div.className = 'game-item';
 
-        if(gameName === "明日方舟" || gameName === "明日方舟终末地"){
+        if (name === "明日方舟" || name === "明日方舟终末地") {
             div.innerHTML = `
             <div class="game-info">
-                <h3>${gameName}</h3>
+                <h3>${name}</h3>
                 <div class="check-box">
-                    <input type="checkbox" id="chk_${gameName}" ${d.checked?'checked':''}>
+                    <input type="checkbox" id="chk_${name}" ${d.checked ? "checked" : ""}>
                     <label>今日是否登录游玩</label>
                 </div>
                 <div class="row">
                     <label>合成玉：</label>
-                    <input type="number" id="res_${gameName}" value="${d.resCount}" min="0">
+                    <input type="number" id="res_${name}" value="${d.resCount}" min="0">
                 </div>
                 <div class="row">
                     <label>源石：</label>
-                    <input type="number" id="stone_${gameName}" value="${d.stoneCount}" min="0">
+                    <input type="number" id="stone_${name}" value="${d.stoneCount}" min="0">
                 </div>
                 <div class="row">
                     <label>抽卡券：</label>
-                    <input type="number" id="ticket_${gameName}" value="${d.ticketCount}" min="0">
+                    <input type="number" id="ticket_${name}" value="${d.ticketCount}" min="0">
                 </div>
                 <div class="row">
                     <label>UP已抽：</label>
-                    <input type="number" id="up_${gameName}" value="${d.upPull}" min="0">
-                    <span style="margin-left:4px">发</span>
+                    <input type="number" id="up_${name}" value="${d.upPull}" min="0">
+                    <span>发</span>
                 </div>
-                <button class="btn btn-blue btn-sm" onclick="saveData('${gameName}')">立即保存</button>
+                <button class="btn btn-blue btn-sm" onclick="save('${name}')">立即保存</button>
             </div>
             <div class="chart-container">
                 <div class="bar bar1" style="height:${getHeight(d.resCount)}"></div>
@@ -219,28 +184,28 @@ function renderGames(){
                 <div class="bar bar3" style="height:${getHeight(d.ticketCount)}"></div>
             </div>
             `;
-        }else{
+        } else {
             div.innerHTML = `
             <div class="game-info">
-                <h3>${gameName}</h3>
+                <h3>${name}</h3>
                 <div class="check-box">
-                    <input type="checkbox" id="chk_${gameName}" ${d.checked?'checked':''}>
+                    <input type="checkbox" id="chk_${name}" ${d.checked ? "checked" : ""}>
                     <label>今日是否登录游玩</label>
                 </div>
                 <div class="row">
                     <label>抽卡资源：</label>
-                    <input type="number" id="res_${gameName}" value="${d.resCount}" min="0">
+                    <input type="number" id="res_${name}" value="${d.resCount}" min="0">
                 </div>
                 <div class="row">
                     <label>抽卡券：</label>
-                    <input type="number" id="ticket_${gameName}" value="${d.ticketCount}" min="0">
+                    <input type="number" id="ticket_${name}" value="${d.ticketCount}" min="0">
                 </div>
                 <div class="row">
                     <label>UP已抽：</label>
-                    <input type="number" id="up_${gameName}" value="${d.upPull}" min="0">
-                    <span style="margin-left:4px">发</span>
+                    <input type="number" id="up_${name}" value="${d.upPull}" min="0">
+                    <span>发</span>
                 </div>
-                <button class="btn btn-blue btn-sm" onclick="saveData('${gameName}')">立即保存</button>
+                <button class="btn btn-blue btn-sm" onclick="save('${name}')">立即保存</button>
             </div>
             <div class="chart-container">
                 <div class="bar bar1" style="height:${getHeight(d.resCount)}"></div>
@@ -250,51 +215,33 @@ function renderGames(){
             `;
         }
         box.appendChild(div);
-    })
+    });
 }
 
-function saveData(gameName){
-    let res = Number(document.getElementById(`res_${gameName}`).value||0);
-    let stoneEle = document.getElementById(`stone_${gameName}`);
-    let stone = stoneEle ? Number(stoneEle.value||0) : 0;
-    let ticket = Number(document.getElementById(`ticket_${gameName}`).value||0);
-    let up = Number(document.getElementById(`up_${gameName}`).value||0);
+function save(gameName) {
+    let res = Number(document.getElementById(`res_${gameName}`).value) || 0;
+    let stone = document.getElementById(`stone_${gameName}`) ? Number(document.getElementById(`stone_${gameName}`).value) || 0 : 0;
+    let ticket = Number(document.getElementById(`ticket_${gameName}`).value) || 0;
+    let up = Number(document.getElementById(`up_${gameName}`).value) || 0;
     let checked = document.getElementById(`chk_${gameName}`).checked;
 
-    // 保存到当前选中日期的历史记录里
-    if(!allGameData[gameName].history) allGameData[gameName].history = {};
-    allGameData[gameName].history[selectDate] = {
-        resCount:res,
-        stoneCount:stone,
-        ticketCount:ticket,
-        upPull:up,
-        checked
-    };
-
-    fetch('/api/saveGameData',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-            username:currUser,
+    fetch('/api/saveGameData', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username: currUser,
             gameName,
-            resCount:res,
-            stoneCount:stone,
-            ticketCount:ticket,
-            upPull:up,
+            resCount: res,
+            stoneCount: stone,
+            ticketCount: ticket,
+            upPull: up,
             checked,
-            date:selectDate
+            date: selectDate
         })
-    }).then(()=>{
-        fetch('/api/getGameData',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({username:currUser})
-        }).then(res=>res.json()).then(userRes=>{
-            allGameData = userRes.data;
-            renderGames();
-            alert('保存成功！');
-        })
-    })
+    }).then(() => {
+        loadData();
+        alert('保存成功！');
+    });
 }
 </script>
 </body>
