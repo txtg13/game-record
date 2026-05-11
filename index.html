@@ -76,16 +76,15 @@ let currUser = "";
 let allGameData = {};
 let gameList = [];
 const MAX_BASE = 20000;
+// 当前选中的日期
+let selectDate = '';
 
 function logout(){
     localStorage.removeItem('gameUser');
     location.href='login.html';
 }
 
-// ==============================================
-// 每日凌晨4点 自动重置【今日是否登录】为未勾选
-// 资源、抽卡数、所有数据 完全不变
-// ==============================================
+// 凌晨4点只重置今日登录勾选，不碰资源
 function autoResetDailyCheck() {
     const now = new Date();
     const year = now.getFullYear();
@@ -97,7 +96,6 @@ function autoResetDailyCheck() {
     let resetRecord = JSON.parse(localStorage.getItem('dailyResetRecord') || '{}');
     let userReset = resetRecord[currUser] || '';
 
-    // 每天 04:00 后自动重置一次
     if (hour >= 4 && userReset !== todayKey) {
         for (let game in allGameData) {
             if (allGameData[game]?.checked !== undefined) {
@@ -109,6 +107,23 @@ function autoResetDailyCheck() {
     }
 }
 
+// 格式化日期为 YYYY-MM-DD
+function formatDate(d){
+    let y = d.getFullYear();
+    let m = String(d.getMonth()+1).padStart(2,'0');
+    let day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+}
+
+// 切换日历重新渲染
+function bindCalendar(){
+    let cal = document.getElementById('calendar');
+    cal.addEventListener('change',function(){
+        selectDate = this.value;
+        renderGames();
+    });
+}
+
 window.onload = function(){
     let user = JSON.parse(localStorage.getItem('gameUser') || '{}');
     if(!user.username){
@@ -116,6 +131,14 @@ window.onload = function(){
         return;
     }
     currUser = user.username;
+
+    // 默认选中今天
+    let today = formatDate(new Date());
+    selectDate = today;
+    document.getElementById('calendar').value = today;
+
+    // 绑定日历切换事件
+    bindCalendar();
 
     fetch('/api/getSettings',{
         method:'POST',
@@ -125,8 +148,6 @@ window.onload = function(){
         document.getElementById('nickname').innerText = data.data?.nickname || currUser;
         document.getElementById('avatar').src = data.data?.avatar || 'https://via.placeholder.com/45';
     })
-
-    document.getElementById('calendar').valueAsDate = new Date();
 
     fetch('/api/games')
     .then(res=>res.json())
@@ -138,10 +159,7 @@ window.onload = function(){
             body:JSON.stringify({username:currUser})
         }).then(res=>res.json()).then(userRes=>{
             allGameData = userRes.data;
-            
-            // 执行每日自动重置
             autoResetDailyCheck();
-            
             renderGames();
         })
     })
@@ -159,7 +177,9 @@ function renderGames(){
 
     gameList.forEach(item=>{
         let gameName = item.gameName;
-        let d = allGameData[gameName] || {
+        // 按选中日期取对应历史数据，没有就用初始空数据
+        let dateKey = selectDate;
+        let d = allGameData[gameName]?.history?.[dateKey] || {
             resCount:0, stoneCount:0, ticketCount:0, upPull:0, checked:false
         };
 
@@ -241,6 +261,16 @@ function saveData(gameName){
     let up = Number(document.getElementById(`up_${gameName}`).value||0);
     let checked = document.getElementById(`chk_${gameName}`).checked;
 
+    // 保存到当前选中日期的历史记录里
+    if(!allGameData[gameName].history) allGameData[gameName].history = {};
+    allGameData[gameName].history[selectDate] = {
+        resCount:res,
+        stoneCount:stone,
+        ticketCount:ticket,
+        upPull:up,
+        checked
+    };
+
     fetch('/api/saveGameData',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -251,7 +281,8 @@ function saveData(gameName){
             stoneCount:stone,
             ticketCount:ticket,
             upPull:up,
-            checked
+            checked,
+            date:selectDate
         })
     }).then(()=>{
         fetch('/api/getGameData',{
